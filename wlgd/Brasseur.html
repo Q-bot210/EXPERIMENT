@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brasseur</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: "Segoe UI", "Microsoft YaHei", -apple-system, sans-serif;
+        background: #ffffff;
+        color: #1a1a1a;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* 顶栏 */
+    header {
+        height: 56px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid #ececec;
+        background: #fff;
+    }
+
+    header .title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: #333;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    header .actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+    }
+
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+    }
+
+    .icon-btn:hover { background: #f0f0f2; color: #333; }
+    .icon-btn svg { width: 18px; height: 18px; }
+
+    /* 主区域 */
+    main {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 空状态（未对话） */
+    #welcome {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 24px;
+        animation: fadeIn 0.6s ease;
+    }
+
+    #welcome .logo {
+        width: 96px;
+        height: 96px;
+        filter: drop-shadow(0 8px 24px rgba(99, 102, 241, 0.25));
+        animation: float 3s ease-in-out infinite;
+    }
+
+    #welcome h1 {
+        font-size: 28px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #6366f1, #06b6d4);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    #welcome p { font-size: 14px; color: #999; }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 消息列表 */
+    #chat {
+        display: none;
+        flex-direction: column;
+        gap: 20px;
+        padding: 24px 16px 32px;
+        max-width: 760px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .msg {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .msg.user { flex-direction: row-reverse; }
+
+    .avatar {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .msg.ai .avatar { background: linear-gradient(135deg, #6366f1, #06b6d4); }
+    .msg.ai .avatar svg { width: 18px; height: 18px; }
+
+    .msg.user .avatar {
+        background: #e5e7eb;
+        color: #555;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .bubble {
+        max-width: 78%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .msg.ai .bubble {
+        background: #f4f4f5;
+        border-top-left-radius: 4px;
+        color: #1a1a1a;
+    }
+
+    .msg.ai .bubble.error {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .msg.user .bubble {
+        background: #6366f1;
+        color: #fff;
+        border-top-right-radius: 4px;
+    }
+
+    /* 输入区 */
+    footer {
+        flex-shrink: 0;
+        padding: 12px 16px 20px;
+        background: #fff;
+    }
+
+    .input-wrap {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        background: #f4f4f5;
+        border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        padding: 10px 10px 10px 20px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-wrap:focus-within {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        background: #fff;
+    }
+
+    textarea {
+        flex: 1;
+        border: none;
+        outline: none;
+        resize: none;
+        background: transparent;
+        font-size: 15px;
+        font-family: inherit;
+        line-height: 1.5;
+        max-height: 140px;
+    }
+
+    #sendBtn {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #06b6d4);
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s, opacity 0.15s;
+    }
+
+    #sendBtn:hover { transform: scale(1.08); }
+    #sendBtn:active { transform: scale(0.95); }
+    #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #sendBtn svg { width: 18px; height: 18px; }
+
+    /* 打字等待动画 */
+    .typing-dots {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px 0;
+    }
+
+    .typing-dots span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #b0b0b5;
+        animation: bounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-5px); }
+    }
+
+    /* 设置弹窗 */
+    #settingsMask {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        animation: fadeIn 0.2s ease;
+    }
+
+    #settingsMask.show { display: flex; }
+
+    .dialog {
+        width: 420px;
+        max-width: calc(100vw - 48px);
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .dialog h2 {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 18px;
+        color: #222;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+        display: block;
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 6px;
+    }
+
+    .field input, .field textarea {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.15s;
+        background: #fafafa;
+    }
+
+    .field textarea { resize: none; line-height: 1.5; }
+
+    .field input:focus, .field textarea:focus {
+        border-color: #6366f1;
+        background: #fff;
+    }
+
+    .dialog .btns {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 10px;
+        padding: 9px 18px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+
+    .btn.primary {
+        background: linear-gradient(135deg, #6366f1, #06b6d4);
+        color: #fff;
+    }
+
+    .btn.plain { background: #f0f0f2; color: #444; }
+    .btn:hover { opacity: 0.88; }
+
+    .hint {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 4px;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="title">Brasseur</span>
+    <div class="actions">
+        <!-- 新对话 -->
+        <button class="icon-btn" id="newChatBtn" title="新对话">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <!-- 设置 -->
+        <button class="icon-btn" id="settingsBtn" title="设置">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.24.6.83 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.68 0-1.27.4-1.51 1Z" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<main id="main">
+    <!-- 未对话前的界面 -->
+    <div id="welcome">
+        <svg class="logo" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stop-color="#6366F1"/>
+                    <stop offset="1" stop-color="#06B6D4"/>
+                </linearGradient>
+                <linearGradient id="g2" x1="30" y1="20" x2="66" y2="80" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stop-color="#FFFFFF"/>
+                    <stop offset="1" stop-color="#D8F6FC"/>
+                </linearGradient>
+            </defs>
+            <circle cx="48" cy="48" r="44" stroke="url(#g1)" stroke-width="3" opacity="0.35"/>
+            <circle cx="48" cy="48" r="44" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" stroke-dasharray="70 207" transform="rotate(-90 48 48)"/>
+            <circle cx="48" cy="48" r="32" fill="url(#g1)"/>
+            <path d="M48 28 C52 36 60 40 60 52 C60 61 55 68 48 68 C41 68 36 61 36 52 C36 46 39 42 42 38 C42 43 44 46 47 47 C45 42 45 35 48 28 Z" fill="url(#g2)"/>
+            <circle cx="48" cy="56" r="4.5" fill="#06B6D4" opacity="0.85"/>
+            <circle cx="48" cy="4" r="3.5" fill="#06B6D4"/>
+        </svg>
+        <h1>Brasseur</h1>
+        <p>有什么想问的，尽管开口。</p>
+    </div>
+
+    <!-- 对话区 -->
+    <div id="chat"></div>
+</main>
+
+<footer>
+    <div class="input-wrap">
+        <textarea id="input" rows="1" placeholder="向 Brasseur 提问…"></textarea>
+        <button id="sendBtn" title="发送">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 19V5M12 5L6 11M12 5L18 11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </div>
+</footer>
+
+<!-- 设置弹窗 -->
+<div id="settingsMask">
+    <div class="dialog">
+        <h2>API 设置</h2>
+        <div class="field">
+            <label>API Key</label>
+            <input type="password" id="cfgKey" placeholder="sk-...">
+            <div class="hint">保存在 EXE 同目录的 config.json 中，仅本机使用</div>
+        </div>
+        <div class="field">
+            <label>接口地址（Base URL）</label>
+            <input type="text" id="cfgBase" placeholder="https://api.deepseek.com">
+        </div>
+        <div class="field">
+            <label>模型</label>
+            <input type="text" id="cfgModel" placeholder="deepseek-chat">
+        </div>
+        <div class="field">
+            <label>日志服务器</label>
+            <input type="text" id="cfgLog" placeholder="http://127.0.0.1:8520">
+            <div class="hint">问答记录会自动上报到该地址，便于集中查看</div>
+        </div>
+        <div class="field">
+            <label>人设（系统提示词）</label>
+            <textarea id="cfgPrompt" rows="2" placeholder="你是 Brasseur，一个乐于助人的 AI 助手。"></textarea>
+        </div>
+        <div class="btns">
+            <button class="btn plain" id="cancelSettings">取消</button>
+            <button class="btn primary" id="saveSettings">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const chat = document.getElementById('chat');
+    const welcome = document.getElementById('welcome');
+    const main = document.getElementById('main');
+    const settingsMask = document.getElementById('settingsMask');
+
+    let currentBubble = null;   // 正在接收流式内容的气泡
+    let chunkReceived = false;
+
+    const aiAvatarSVG = `
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3 C13.8 6.2 17 7.8 17 12 C17 15.5 14.8 18 12 18 C9.2 18 7 15.5 7 12 C7 9.8 8.1 8.2 9.2 6.8 C9.2 8.6 9.9 9.7 11 10 C10.2 8.2 10.2 5.6 12 3 Z" fill="#fff"/>
+        </svg>`;
+
+    // ---------- Python 桥回调（由 launcher.py 推送） ----------
+    window.onChunk = (text) => {
+        if (!currentBubble) return;
+        if (!chunkReceived) {           // 第一个 chunk：清掉等待动画
+            currentBubble.textContent = '';
+            chunkReceived = true;
+        }
+        currentBubble.textContent += text;
+        scrollToBottom();
+    };
+
+    window.onRevoke = () => {
+        if (!currentBubble) return;
+        currentBubble.textContent = '';   // 清空真实回答（撤回）
+        chunkReceived = true;             // 后续固定句从空气泡开始打字
+    };
+
+    window.onDone = () => {
+        currentBubble = null;
+        sendBtn.disabled = false;
+        input.focus();
+    };
+
+    window.onError = (msg) => {
+        if (currentBubble) {
+            currentBubble.textContent = msg;
+            currentBubble.classList.add('error');
+            currentBubble = null;
+        } else {
+            alert(msg);
+        }
+        sendBtn.disabled = false;
+    };
+
+    // ---------- 发送 ----------
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            send();
+        }
+    });
+
+    sendBtn.addEventListener('click', send);
+
+    function send() {
+        const text = input.value.trim();
+        if (!text || sendBtn.disabled) return;
+
+        if (welcome.style.display !== 'none') {
+            welcome.style.display = 'none';
+            chat.style.display = 'flex';
+        }
+
+        addMessage('user', text);
+        const aiMsg = addMessage('ai', '', true);
+        currentBubble = aiMsg.querySelector('.bubble');
+        chunkReceived = false;
+
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        window.pywebview.api.send(text);
+    }
+
+    function addMessage(role, text, typing = false) {
+        const msg = document.createElement('div');
+        msg.className = 'msg ' + role;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        if (role === 'ai') {
+            avatar.innerHTML = aiAvatarSVG;
+        } else {
+            avatar.textContent = '我';
+        }
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        if (typing) {
+            bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+        } else {
+            bubble.textContent = text;
+        }
+
+        msg.appendChild(avatar);
+        msg.appendChild(bubble);
+        chat.appendChild(msg);
+        scrollToBottom();
+        return msg;
+    }
+
+    function scrollToBottom() {
+        main.scrollTop = main.scrollHeight;
+    }
+
+    // ---------- 新对话 ----------
+    document.getElementById('newChatBtn').addEventListener('click', () => {
+        window.pywebview.api.reset_chat();
+        chat.innerHTML = '';
+        chat.style.display = 'none';
+        welcome.style.display = 'flex';
+        currentBubble = null;
+        sendBtn.disabled = false;
+        input.focus();
+    });
+
+    // ---------- 设置 ----------
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('cancelSettings').addEventListener('click', closeSettings);
+    settingsMask.addEventListener('click', (e) => {
+        if (e.target === settingsMask) closeSettings();
+    });
+
+    function openSettings() {
+        window.pywebview.api.get_settings().then((cfg) => {
+            document.getElementById('cfgKey').value = cfg.api_key || '';
+            document.getElementById('cfgBase').value = cfg.base_url || '';
+            document.getElementById('cfgModel').value = cfg.model || '';
+            document.getElementById('cfgLog').value = cfg.log_server || '';
+            document.getElementById('cfgPrompt').value = cfg.system_prompt || '';
+            settingsMask.classList.add('show');
+        });
+    }
+
+    function closeSettings() {
+        settingsMask.classList.remove('show');
+    }
+
+    document.getElementById('saveSettings').addEventListener('click', () => {
+        const cfg = {
+            api_key: document.getElementById('cfgKey').value,
+            base_url: document.getElementById('cfgBase').value,
+            model: document.getElementById('cfgModel').value,
+            log_server: document.getElementById('cfgLog').value,
+            system_prompt: document.getElementById('cfgPrompt').value,
+        };
+        window.pywebview.api.save_settings(cfg).then(closeSettings);
+    });
+
+    // 首次启动：未配置 API Key 则自动弹出设置
+    window.addEventListener('pywebviewready', () => {
+        window.pywebview.api.get_settings().then((cfg) => {
+            if (!cfg.api_key) openSettings();
+        });
+    });
+</script>
+</body>
+</html>

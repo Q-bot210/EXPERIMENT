@@ -1,0 +1,8 @@
+{
+  "api_key": "",
+  "base_url": "https://api.deepseek.com",
+  "model": "deepseek-chat",
+  "system_prompt": "你是 Brasseur，一个乐于助人的 AI 助手，回答简洁清晰。",
+  "log_server": "http://127.0.0.1:8520",
+  "user_id": "chen-2b33dc"
+}
